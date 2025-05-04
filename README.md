@@ -1,11 +1,26 @@
 # Project3_Lab2
 软件项目研发实践（3）Lab2
 # 创建项目
+首先创建一个新项目，选择“Empty Activity”。
 ![image](https://github.com/user-attachments/assets/820565c5-bc09-4e57-8ded-43a7c8c2fd1a)
+将项目命名为“CameraXApp”，软件包名称更改为“com.android.example.cameraxapp”。选择Kotlin语言开发，设定最低支持的API Level 24。
 ![image](https://github.com/user-attachments/assets/bf13d46b-a0a8-4b70-b0af-9872502b3afc)
 # 添加 Gradle 依赖
+打开项目的模块（Module）的build.gradle 文件，并添加 CameraX 依赖项：
 ![image](https://github.com/user-attachments/assets/daae1183-08f8-4b73-b2f0-846b5724acd4)
 # 创建项目布局
+本项目中，涉及以下的功能：
+
+CameraX PreviewView（用于预览相机图片/视频）。
+
+用于控制图片拍摄的标准按钮。
+
+用于开始/停止视频拍摄的标准按钮。
+
+用于放置 2 个按钮的垂直指南。
+
+打开res/layout/activity_main.xml 的 activity_main 布局文件，并将其替换为以下代码。
+
 ![image](https://github.com/user-attachments/assets/ddf3770c-a3ab-4b49-8c13-19b418304af5)
 ![image](https://github.com/user-attachments/assets/def60cce-3762-4f75-86e4-037f449ba5c6)
 # 编写 MainActivity.kt 代码
@@ -74,11 +89,17 @@ class MainActivity : AppCompatActivity() {
 ```</code></pre>
 ![image](https://github.com/user-attachments/assets/8b0066b8-8bc5-4dc7-af86-ed54d7593dfe)
 # 请求必要的权限
+应用需要获得用户授权才能打开相机；录制音频也需要麦克风权限；在 Android 9 § 及更低版本上，MediaStore 需要外部存储空间写入权限。在此步骤中，我们将实现这些必要的权限。
+
+打开 AndroidManifest.xml，然后将以下代码行添加到 application 标记之前。
 ![image](https://github.com/user-attachments/assets/6ff39e1a-2d1a-48e6-98ec-a806d14b9b02)
 ![image](https://github.com/user-attachments/assets/4783758b-f295-45a1-bc4c-6e697f36d537)
 ![image](https://github.com/user-attachments/assets/98ee938e-a78f-4d2a-bf84-89feb760fa02)
 ![image](https://github.com/user-attachments/assets/6dbdc40f-1a46-4686-a307-c7ae13c0a930)
 # 实现 Preview 用例
+在相机应用中，取景器用于让用户预览他们拍摄的照片。我们将使用 CameraX Preview 类实现取景器。
+
+如需使用 Preview，首先需要定义一个配置，然后系统会使用该配置创建用例的实例。生成的实例就是绑定到 CameraX 生命周期的内容。填充之前的startCamera() 函数
 <pre><code>```kotlin 
 private fun startCamera() {
    val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
@@ -113,7 +134,6 @@ private fun startCamera() {
 }
 ```</code></pre>
 ![image](https://github.com/user-attachments/assets/499e0449-a54b-4391-bf53-61f39269326e)
-![image](https://github.com/user-attachments/assets/f09f9966-a4d1-4d0d-9dee-73d19711445a)
 # 实现 ImageCapture 用例（拍照功能）
 <pre><code>
   private fun takePhoto() {
@@ -159,7 +179,12 @@ private fun startCamera() {
 }
 </code></pre>
 ![image](https://github.com/user-attachments/assets/5f6c4fcb-4701-42e2-ad21-89b5d8f4f155)
+![image](https://github.com/user-attachments/assets/f09f9966-a4d1-4d0d-9dee-73d19711445a)
 # 实现 ImageAnalysis 用例
+使用 ImageAnalysis 功能可让相机应用变得更加有趣。它允许定义实现 ImageAnalysis.Analyzer 接口的自定义类，并使用传入的相机帧调用该类。无需管理相机会话状态，甚至无需处理图像；与其他生命周期感知型组件一样，仅绑定到应用所需的生命周期就足够了。
+
+将此分析器添加为 MainActivity.kt 中的内部类。分析器会记录图像的平均亮度。如需创建分析器，我们会替换实现 ImageAnalysis.Analyzer 接口的类中的 analyze 函数。
+
 <pre><code>
   private class LuminosityAnalyzer(private val listener: LumaListener) : ImageAnalysis.Analyzer {
 
