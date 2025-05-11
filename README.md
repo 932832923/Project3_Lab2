@@ -282,4 +282,133 @@ private fun captureVideo() {
 </code></pre>
 ![image](https://github.com/user-attachments/assets/168ab091-d649-44a6-a130-b549420b1780)
 
+扩 展 实 验 可 以 尝 试 考 虑 更 多 不 同 的 组 合 ， 在这里考虑的是 Preview + VideoCapture + ImageCapture。
+
+### Preview 预览模块
+
+<pre><code>
+   val preview = Preview.Builder().build().also {
+    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+   }
+</code></pre>
+
+### ImageCapture 拍照模块
+#### 拍照逻辑（按钮点击）
+<pre><code>
+binding.imageCaptureButton.setOnClickListener { takePhoto() }
+</code></pre>
+
+<pre><code>
+private fun takePhoto() {
+    val imageCapture = imageCapture ?: return
+    val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(System.currentTimeMillis())
+    val contentValues = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-App")
+        }
+    }
+
+    val outputOptions = ImageCapture.OutputFileOptions.Builder(
+        contentResolver, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues
+    ).build()
+
+    imageCapture.takePicture(
+        outputOptions, ContextCompat.getMainExecutor(this),
+        object : ImageCapture.OnImageSavedCallback {
+            override fun onError(exc: ImageCaptureException) {
+                Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
+            }
+
+            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                val msg = "Photo saved: ${output.savedUri}"
+                Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                Log.d(TAG, msg)
+            }
+        }
+    )
+}
+
+</code></pre>
+
+### VideoCapture 录像模块
+
+<pre><code>
+   val recorder = Recorder.Builder()
+    .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
+    .build()
+
+videoCapture = VideoCapture.withOutput(recorder)
+</code></pre>
+
+#### 录像逻辑（按钮点击）：
+<pre><code>
+binding.videoCaptureButton.setOnClickListener { captureVideo() }
+</code></pre>
+<pre><code>
+   private fun captureVideo() {
+    val videoCapture = this.videoCapture ?: return
+    binding.videoCaptureButton.isEnabled = false
+
+    val curRecording = recording
+    if (curRecording != null) {
+        curRecording.stop()
+        recording = null
+        return
+    }
+
+    val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(System.currentTimeMillis())
+    val contentValues = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+        put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/CameraX-App")
+        }
+    }
+
+    val mediaStoreOutput = MediaStoreOutputOptions.Builder(
+        contentResolver, MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+    ).setContentValues(contentValues).build()
+
+    recording = videoCapture.output
+        .prepareRecording(this, mediaStoreOutput)
+        .apply {
+            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED) {
+                withAudioEnabled()
+            }
+        }
+        .start(ContextCompat.getMainExecutor(this)) { event ->
+            when (event) {
+                is VideoRecordEvent.Start -> {
+                    binding.videoCaptureButton.text = getString(R.string.stop_capture)
+                    binding.videoCaptureButton.isEnabled = true
+                }
+
+                is VideoRecordEvent.Finalize -> {
+                    if (!event.hasError()) {
+                        val msg = "Video saved: ${event.outputResults.outputUri}"
+                        Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                        Log.d(TAG, msg)
+                    } else {
+                        Log.e(TAG, "Video capture failed: ${event.error}")
+                    }
+                    binding.videoCaptureButton.text = getString(R.string.start_capture)
+                    binding.videoCaptureButton.isEnabled = true
+                }
+            }
+        }
+}
+</code></pre>
+
+### 最终绑定 UseCase（startCamera）
+<pre><code>
+   cameraProvider.bindToLifecycle(
+    this, cameraSelector, preview, imageCapture, videoCapture
+)
+</code></pre>
+
+
+![image](https://github.com/user-attachments/assets/418abc8f-042b-443d-ab9a-9a8f6495b206)
 
